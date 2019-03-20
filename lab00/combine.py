@@ -9,14 +9,16 @@ def _get_args():
 
     return sys.argv[1], sys.argv[2], sys.argv[3], float(sys.argv[4])
 
+def _combine(img1, img2, alpha):
+    out = img1 * alpha + img2 * (1-alpha)
+    return out.astype(np.uint8)
+
 def main():
     in1_path, in2_path, output_path, alpha = _get_args()
     img1 = io.imread(in1_path)
     img2 = io.imread(in2_path)
     
-    out = img1 * alpha + img2 * (1-alpha)
-    out = out.astype(np.uint8)
-
+    out = _combine(img1, img2, alpha)
     io.imsave(output_path, out)
 
 if __name__ == '__main__':
