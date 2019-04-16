@@ -1,6 +1,5 @@
 from skimage import io
 from scipy import fftpack
-import matplotlib.pyplot as plt
 import numpy as np
 import os
 import sys
