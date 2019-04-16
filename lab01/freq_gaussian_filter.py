@@ -27,7 +27,7 @@ def _output_images(output_path, img_freq, out_freq, out_spacial):
 
     io.imsave(os.path.join(path, '{}-{}'.format('in-freq', filename)), img_freq)
     io.imsave(os.path.join(path, '{}-{}'.format('out-freq', filename)), out_freq)
-    io.imsave(os.path.join(path, filename), out_freq)
+    io.imsave(os.path.join(path, '{}-{}'.format('out', filename)), out_spacial)
 
 
 def _generate_gaussian_transfer_function(shape, d0):
@@ -48,16 +48,16 @@ def _apply_gaussian(img_freq, d0):
 
 
 def main():
+    # utils image functions
+    freq2spacial = lambda freq: _normalize(np.abs(fftpack.ifft2(fftpack.ifftshift(freq))))
+    freq2plot = lambda freq: _normalize(20 * np.log(np.abs(freq)))
+
     # read input
     input_path, output_path, d0 = _get_args()
     img = io.imread(input_path).astype(np.float32)
     
     # calculate fft of input image
     img_freq = fftpack.fftshift(fftpack.fft2(img))
-
-    # utils image functions
-    freq2spacial = lambda freq: _normalize(np.abs(fftpack.ifft2(fftpack.ifftshift(freq))))
-    freq2plot = lambda freq: _normalize(np.log(np.abs(freq)))
 
     # apply gaussian filter in frequency domain
     out_freq = _apply_gaussian(img_freq, d0)
