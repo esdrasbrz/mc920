@@ -1,6 +1,5 @@
-from skimage import io, exposure
-from scipy import ndimage
 from math import floor
+import cv2
 import numpy as np
 import sys
 
@@ -50,14 +49,14 @@ def dithering(image, out):
 
 def main():
     input_path, output_path = _get_args()
-    img = io.imread(input_path)
+    img = cv2.imread(input_path, cv2.IMREAD_GRAYSCALE)
     print(img.shape)
 
     img = normalize(img)
     out = create_half_toning_matrix(img)
     out = dithering(img, out)
 
-    io.imsave(output_path, out)
+    cv2.imwrite(output_path, out)
     
 
 if __name__ == '__main__':
