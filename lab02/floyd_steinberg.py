@@ -58,7 +58,7 @@ def main():
     input_path, output_path = _get_args()
     img = cv2.imread(input_path, cv2.IMREAD_GRAYSCALE)
 
-    out = dithering(img, zigzag=False)
+    out = dithering(img, zigzag=True)
     cv2.imwrite(output_path, out)
     
 
