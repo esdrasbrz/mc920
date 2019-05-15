@@ -1,4 +1,5 @@
 from skimage.morphology import binary_opening, binary_closing
+import config as cfg
 import cv2
 import numpy as np
 import sys
@@ -26,30 +27,40 @@ def _imshow(imgs):
 
 
 def _preprocess(img):
-    row = binary_closing(img, selem=np.ones((1,100)))
-    column = binary_closing(img, selem=np.ones((200,1)))
+    row = binary_closing(img, selem=cfg.ROW_CLOSING_SELEM)
+    column = binary_closing(img, selem=cfg.ROW_CLOSING_SELEM)
 
     img = row & column
     return img
 
 
 def _connected_components(img):
-    nlabels, labels, stats, centroids = cv2.connectedComponentsWithStats(_bin2img(img), 4, cv2.CV_32S)
-    return nlabels, stats
+    nlabels, labels, stats, centroids = cv2.connectedComponentsWithStats(255*img.astype(np.uint8), 4, cv2.CV_32S)
+    return stats
 
+
+def _draw_rect(img, stats):
+    img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+
+    for label in stats:
+        min_x, min_y, w, h, area = label
+        cv2.rectangle(img, (min_x, min_y), (min_x+w, min_y+h), (0, 255, 0), 3)
+
+    return img
 
 def main():
     # read image
     input_path, output_path = _get_args()
-    img = cv2.imread(input_path, cv2.IMREAD_GRAYSCALE)
-    img = _img2bin(img)
+    input_img = cv2.imread(input_path, cv2.IMREAD_GRAYSCALE)
+    img = _img2bin(input_img)
 
     # processing phase
-    out = _preprocess(img)
-    out = binary_closing(out, selem=np.ones((1,30)))
-    _connected_components(out)
+    img = _preprocess(img)
+    img = binary_closing(img, selem=cfg.POS_CLOSING_SELEM)
+    stats = _connected_components(img)
 
-    cv2.imwrite(output_path, _bin2img(out))
+    blobs_img = _draw_rect(_bin2img(img), stats)
+    cv2.imwrite(output_path, blobs_img)
     
 
 if __name__ == '__main__':
