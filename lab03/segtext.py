@@ -39,14 +39,28 @@ def _connected_components(img):
     return stats
 
 
-def _draw_rect(img, stats):
+def _draw_rect(img, stats, ratios):
     img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+
+    for label, stat in enumerate(stats):
+        min_x, min_y, w, h, area = stat
+        area_ratio = ratios[label]
+
+        cv2.rectangle(img, (min_x, min_y), (min_x+w, min_y+h), (0, 255, 0), 3)
+        cv2.putText(img, '%.3f' % area_ratio, (min_x, min_y), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2, cv2.LINE_AA)
+
+    return img
+
+
+def _calc_ratios(img, stats):
+    ratios = []
 
     for label in stats:
         min_x, min_y, w, h, area = label
-        cv2.rectangle(img, (min_x, min_y), (min_x+w, min_y+h), (0, 255, 0), 3)
+        ratios.append(area / (w*h))
 
-    return img
+    return ratios
+
 
 def main():
     # read image
@@ -58,8 +72,9 @@ def main():
     img = _preprocess(img)
     img = binary_closing(img, selem=cfg.POS_CLOSING_SELEM)
     stats = _connected_components(img)
+    ratios = _calc_ratios(img, stats)
 
-    blobs_img = _draw_rect(_bin2img(img), stats)
+    blobs_img = _draw_rect(_bin2img(img), stats, ratios)
     cv2.imwrite(output_path, blobs_img)
     
 
