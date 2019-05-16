@@ -1,4 +1,4 @@
-from skimage.morphology import binary_opening, binary_closing
+from skimage.morphology import binary_opening, binary_closing, binary_dilation
 import config as cfg
 import cv2
 import numpy as np
@@ -28,9 +28,16 @@ def _imshow(imgs):
 
 def _preprocess(img):
     row = binary_closing(img, selem=cfg.ROW_CLOSING_SELEM)
-    column = binary_closing(img, selem=cfg.ROW_CLOSING_SELEM)
+    column = binary_closing(img, selem=cfg.COLUMN_CLOSING_SELEM)
 
     img = row & column
+    return img
+
+
+def _process_words(img):
+    img = binary_dilation(img, selem=cfg.WORDS_DILATION_SELEM)
+    img = binary_closing(img, selem=cfg.WORDS_CLOSING_SELEM)
+
     return img
 
 
@@ -84,8 +91,19 @@ def _apply_thr(stats, ratios):
     return filtered_stats
 
 
+def _stats2mask(stats, shape):
+    mask = np.zeros(shape)
+
+    for stat in stats:
+        min_x, min_y, w, h, __ = stat
+        mask[min_y:min_y+h, min_x:min_x+w] = 1
+
+    return mask.astype(np.bool)
+
+
 def _draw(img, stats, ratios=None):
-    img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+    if len(img.shape) == 2:
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
 
     for label, stat in enumerate(stats):
         min_x, min_y, w, h, area = stat
@@ -105,7 +123,7 @@ def main():
     input_img = cv2.imread(input_path, cv2.IMREAD_GRAYSCALE)
     img = _img2bin(input_img)
 
-    # processing phase
+    # text processing phase
     img = _preprocess(img)
     img = binary_closing(img, selem=cfg.POS_CLOSING_SELEM)
     stats = _connected_components(img)
@@ -117,7 +135,22 @@ def main():
     text_stats = _apply_thr(stats, ratios)
     text_blobs_img = _draw(input_img, text_stats)
     cv2.imwrite(os.path.join(output_path, 'text_blobs_img.png'), text_blobs_img)
-    
+
+    # segmentating words
+    words = _process_words(_img2bin(input_img))
+    cv2.imwrite(os.path.join(output_path, 'words_img.png'), _bin2img(words))
+
+    words_stats = _connected_components(words)
+    text_mask = _stats2mask(text_stats, img.shape)
+    words_mask = _stats2mask(words_stats, img.shape) & text_mask
+
+    words_stats = _connected_components(words_mask)
+    words_blobs_img = _draw(input_img, words_stats)
+    cv2.imwrite(os.path.join(output_path, 'words_blobs_img.png'), words_blobs_img)
+
+    print('number of lines: %d' % len(text_stats))
+    print('number of words: %d' % len(words_stats))
+
 
 if __name__ == '__main__':
     main()
