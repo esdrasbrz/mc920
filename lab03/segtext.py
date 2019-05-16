@@ -36,20 +36,25 @@ def _preprocess(img):
 
 def _connected_components(img):
     nlabels, labels, stats, centroids = cv2.connectedComponentsWithStats(255*img.astype(np.uint8), 4, cv2.CV_32S)
-    return stats
+    return stats[1:]
 
 
-def _draw_rect(img, stats, ratios):
-    img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+def _count_transitions(img, min_x, min_y, w, h):
+    img_h, img_w = img.shape
+    ntrans = 0
 
-    for label, stat in enumerate(stats):
-        min_x, min_y, w, h, area = stat
-        area_ratio = ratios[label]
+    for dy in range(h):
+        for dx in range(w):
+            x = min_x+dx
+            y = min_y+dy
 
-        cv2.rectangle(img, (min_x, min_y), (min_x+w, min_y+h), (0, 255, 0), 3)
-        cv2.putText(img, '%.3f' % area_ratio, (min_x, min_y), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2, cv2.LINE_AA)
+            if x < img_w and y < img_h and img[y,x]:
+                if x-1 >= min_x and not img[y,x-1]:
+                    ntrans += 1
+                if y-1 >= min_y and not img[y-1,x]:
+                    ntrans += 1
 
-    return img
+    return ntrans
 
 
 def _calc_ratios(img, stats):
@@ -57,9 +62,27 @@ def _calc_ratios(img, stats):
 
     for label in stats:
         min_x, min_y, w, h, area = label
-        ratios.append(area / (w*h))
+
+        ntrans = _count_transitions(img, min_x, min_y, w, h)
+        area_ratio = area / (w*h)
+        trans_ratio = ntrans / area
+        ratios.append((area_ratio, trans_ratio))
 
     return ratios
+
+
+def _draw(img, stats, ratios):
+    img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+
+    for label, stat in enumerate(stats):
+        min_x, min_y, w, h, area = stat
+        area_ratio, trans_ratio = ratios[label]
+
+        cv2.rectangle(img, (min_x, min_y), (min_x+w, min_y+h), (0, 255, 0), 3)
+        cv2.putText(img, '%.3f | %.3f' % (area_ratio, trans_ratio), (min_x, min_y), \
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2, cv2.LINE_AA)
+
+    return img
 
 
 def main():
@@ -74,8 +97,8 @@ def main():
     stats = _connected_components(img)
     ratios = _calc_ratios(img, stats)
 
-    blobs_img = _draw_rect(_bin2img(img), stats, ratios)
-    cv2.imwrite(output_path, blobs_img)
+    blobs_img = _draw(_bin2img(img), stats, ratios)
+    cv2.imwrite(os.path.join(output_path, 'blobs_img.png'), blobs_img)
     
 
 if __name__ == '__main__':
