@@ -71,16 +71,30 @@ def _calc_ratios(img, stats):
     return ratios
 
 
-def _draw(img, stats, ratios):
+def _apply_thr(stats, ratios):
+    filtered_stats = []
+
+    for label, stat in enumerate(stats):
+        area_ratio, trans_ratio = ratios[label]
+
+        if cfg.TEXT_AREA_RATIO_THR[0] < area_ratio < cfg.TEXT_AREA_RATIO_THR[1] \
+                and cfg.TEXT_TRANS_RATIO_THR[0] < trans_ratio < cfg.TEXT_TRANS_RATIO_THR[1]:
+            filtered_stats.append(stat)
+
+    return filtered_stats
+
+
+def _draw(img, stats, ratios=None):
     img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
 
     for label, stat in enumerate(stats):
         min_x, min_y, w, h, area = stat
-        area_ratio, trans_ratio = ratios[label]
-
         cv2.rectangle(img, (min_x, min_y), (min_x+w, min_y+h), (0, 255, 0), 3)
-        cv2.putText(img, '%.3f | %.3f' % (area_ratio, trans_ratio), (min_x, min_y), \
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2, cv2.LINE_AA)
+
+        if ratios:
+            area_ratio, trans_ratio = ratios[label]
+            cv2.putText(img, '%.3f | %.3f' % (area_ratio, trans_ratio), (min_x, min_y), \
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2, cv2.LINE_AA)
 
     return img
 
@@ -97,8 +111,12 @@ def main():
     stats = _connected_components(img)
     ratios = _calc_ratios(img, stats)
 
-    blobs_img = _draw(_bin2img(img), stats, ratios)
+    blobs_img = _draw(_bin2img(img), stats, ratios=ratios)
     cv2.imwrite(os.path.join(output_path, 'blobs_img.png'), blobs_img)
+
+    text_stats = _apply_thr(stats, ratios)
+    text_blobs_img = _draw(input_img, text_stats)
+    cv2.imwrite(os.path.join(output_path, 'text_blobs_img.png'), text_blobs_img)
     
 
 if __name__ == '__main__':
