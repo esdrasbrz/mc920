@@ -1,6 +1,7 @@
 from skimage import io
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, MiniBatchKMeans
 import numpy as np
+import time
 import sys
 
 
@@ -19,9 +20,12 @@ def _extract_features(img):
 
 
 def _clusterize(colors, n_clusters):
-    kmeans = KMeans(n_clusters=n_clusters,
-                    random_state=0,
-                    n_jobs=-1).fit(colors)
+    t = time.time()
+    kmeans = MiniBatchKMeans(n_clusters=n_clusters,
+                             random_state=0,
+                             batch_size=1024).fit(colors)
+    print('Time to clusterize: {} s'.format(time.time() - t))
+
     return kmeans.labels_, kmeans.cluster_centers_
 
 
