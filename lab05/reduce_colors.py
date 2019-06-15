@@ -23,7 +23,7 @@ def _clusterize(colors, n_clusters):
     t = time.time()
     kmeans = MiniBatchKMeans(n_clusters=n_clusters,
                              random_state=0,
-                             batch_size=1024).fit(colors)
+                             batch_size=2**12).fit(colors)
     print('Time to clusterize: {} s'.format(time.time() - t))
 
     return kmeans.labels_, kmeans.cluster_centers_
